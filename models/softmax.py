@@ -4,7 +4,7 @@ import numpy as np
 
 
 class Softmax:
-    def __init__(self, n_class: int, lr: float, epochs: int, reg_const: float):
+    def __init__(self, n_class: int, lr: float, epochs: int, reg_const: float, decrease_lr: bool = False):
         """Initialize a new classifier.
 
         Parameters:
@@ -18,6 +18,7 @@ class Softmax:
         self.epochs = epochs
         self.reg_const = reg_const
         self.n_class = n_class
+        self.decrease_lr = decrease_lr
 
     def calc_gradient(self, X_train: np.ndarray, y_train: np.ndarray) -> np.ndarray:
         """Calculate gradient of the softmax loss.
@@ -34,8 +35,20 @@ class Softmax:
         Returns:
             gradient with respect to weights w; an array of same shape as w
         """
-        # TODO: implement me
-        return
+        N = X_train.shape[0]
+        fs = X_train.dot(self.w)
+
+        feature_scores = np.exp(fs - np.max(fs, axis=1, keepdims=True))
+        probs = feature_scores / np.sum(feature_scores, axis=1, keepdims=True)
+
+        prob_scores = probs
+        prob_scores[range(N), y_train] -= 1
+        prob_scores /= N
+
+        dW = X_train.T.dot(prob_scores)
+        dW += self.reg_const * self.w
+
+        return dW
 
     def train(self, X_train: np.ndarray, y_train: np.ndarray):
         """Train the classifier.
@@ -50,8 +63,35 @@ class Softmax:
                 N examples with D dimensions
             y_train: a numpy array of shape (N,) containing training labels
         """
-        # TODO: implement me
-        return
+        samples = X_train.shape[0]
+        dim = X_train.shape[1]
+
+        # Set random weight
+        self.w = np.random.rand(dim, self.n_class)
+
+        # Set up mini-batch stochastic gradient descent
+        batch_size = 100
+        batches = samples // batch_size
+        indices = np.arange(samples)
+
+        for epoch in range(self.epochs):
+            # Gradient descent
+            np.random.shuffle(indices)
+            for batch in range(batches):
+                start = batch * batch_size
+                end = (batch + 1) * batch_size
+                if end >= samples:
+                    end = -1
+                batch_indices = indices[start:end]
+                batch_X = X_train[batch_indices]
+                batch_y = y_train[batch_indices]
+                batch_w = self.calc_gradient(batch_X, batch_y)
+                self.w -= self.lr * batch_w
+
+            # Decrease learning rate
+            if (self.decrease_lr):
+                self.lr *= 0.95
+
 
     def predict(self, X_test: np.ndarray) -> np.ndarray:
         """Use the trained weights to predict labels for test data points.
@@ -65,5 +105,5 @@ class Softmax:
                 length N, where each element is an integer giving the predicted
                 class.
         """
-        # TODO: implement me
-        return
+        y_pred = X_test @ self.w
+        return [np.argmax(i) for i in y_pred]
