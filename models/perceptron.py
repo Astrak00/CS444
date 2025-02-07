@@ -2,9 +2,10 @@
 
 import numpy as np
 
+DECAY = 0.95
 
 class Perceptron:
-    def __init__(self, n_class: int, lr: float, epochs: int):
+    def __init__(self, n_class: int, lr: float, epochs: int, decay: float):
         """Initialize a new classifier.
 
         Parameters:
@@ -12,10 +13,11 @@ class Perceptron:
             lr: the learning rate
             epochs: the number of epochs to train for
         """
-        self.w = None  # TODO: change this
+        self.w = None
         self.lr = lr
         self.epochs = epochs
         self.n_class = n_class
+        self.decay = decay
 
     def train(self, X_train: np.ndarray, y_train: np.ndarray):
         """Train the classifier.
@@ -34,6 +36,8 @@ class Perceptron:
         self.w = np.random.rand(self.n_class, D)
 
         for _ in range(self.epochs):
+            if self.decay:
+                self.lr *= DECAY
             for i in range(N):
                 xi, yi = X_train[i], y_train[i]
                 scores = np.dot(self.w, xi)
