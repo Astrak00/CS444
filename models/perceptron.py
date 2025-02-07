@@ -5,7 +5,7 @@ import numpy as np
 DECAY = 0.95
 
 class Perceptron:
-    def __init__(self, n_class: int, lr: float, epochs: int, decay: float):
+    def __init__(self, n_class: int, lr: float, epochs: int, decay: float = False):
         """Initialize a new classifier.
 
         Parameters:
