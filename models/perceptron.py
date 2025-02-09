@@ -2,10 +2,10 @@
 
 import numpy as np
 
-DECAY = 0.95
+DECAY = 0.85
 
 class Perceptron:
-    def __init__(self, n_class: int, lr: float, epochs: int, decay: float = False):
+    def __init__(self, n_class: int, lr: float, epochs: int, decay: float = 1):
         """Initialize a new classifier.
 
         Parameters:
@@ -18,6 +18,7 @@ class Perceptron:
         self.epochs = epochs
         self.n_class = n_class
         self.decay = decay
+        self.reg_const = 8
 
     def train(self, X_train: np.ndarray, y_train: np.ndarray):
         """Train the classifier.
@@ -32,20 +33,33 @@ class Perceptron:
                 N examples with D dimensions
             y_train: a numpy array of shape (N,) containing training labels
         """
-        N, D = X_train.shape
-        self.w = np.random.rand(self.n_class, D)
+        samples = X_train.shape[0]
+        dim = X_train.shape[1]
+        
+        # Randomize starting weights
+        self.w = np.random.rand(dim, self.n_class)
+        indices = np.arange(samples)
 
-        for _ in range(self.epochs):
-            if self.decay:
-                self.lr *= DECAY
-            for i in range(N):
-                xi, yi = X_train[i], y_train[i]
-                scores = np.dot(self.w, xi)
-                predicted_class = np.argmax(scores)
+        for epoch in range(self.epochs):
+            # y_pred = X_train @ self.w
+            # temp = [np.argmax(i) for i in y_pred]
+            # print("Epoch", epoch, "Accuracy",np.sum(y_train == temp) / len(y_train) * 100)
 
-                if predicted_class != yi:
-                    self.w[yi] += self.lr * xi
-                    self.w[predicted_class] -= self.lr * xi
+            np.random.shuffle(indices)
+
+            for sample_index in indices:
+                for current_class in range(self.n_class):
+                    # Only update the weights for incorrect classes
+                    if current_class != y_train[sample_index]:
+                        if np.dot(np.transpose(self.w)[current_class], X_train[sample_index]) > np.dot(np.transpose(self.w)[y_train[sample_index]], X_train[sample_index]):
+                            np.transpose(self.w)[y_train[sample_index]] = np.transpose(self.w)[y_train[sample_index]] + self.lr * X_train[sample_index]
+                            np.transpose(self.w)[current_class] = np.transpose(self.w)[current_class] - self.lr * X_train[sample_index]
+                    
+                    
+                    np.transpose(self.w)[current_class] += (self.lr * self.reg_const / samples) * np.transpose(self.w)[current_class]
+
+            # Decrease learning rate
+            self.lr *= self.decay
 
     def predict(self, X_test: np.ndarray) -> np.ndarray:
         """Use the trained weights to predict labels for test data points.
@@ -59,6 +73,6 @@ class Perceptron:
                 length N, where each element is an integer giving the predicted
                 class.
         """
-        scores = np.dot(X_test, self.w.T)
-        predicted_labels = np.argmax(scores, axis=1)
-        return predicted_labels
+    
+        y_pred = X_test @ self.w
+        return [np.argmax(i) for i in y_pred]
