@@ -4,7 +4,7 @@ import numpy as np
 
 
 class Softmax:
-    def __init__(self, n_class: int, lr: float, epochs: int, reg_const: float, decrease_lr: bool = False):
+    def __init__(self, n_class: int, lr: float, epochs: int, reg_const: float, decrease_lr: float = 1, batch_size: int = 100):
         """Initialize a new classifier.
 
         Parameters:
@@ -13,12 +13,13 @@ class Softmax:
             epochs: the number of epochs to train for
             reg_const: the regularization constant
         """
-        self.w = None  # TODO: change this
+        self.w = None 
         self.lr = lr
         self.epochs = epochs
         self.reg_const = reg_const
         self.n_class = n_class
         self.decrease_lr = decrease_lr
+        self.batch_size = batch_size
 
     def calc_gradient(self, X_train: np.ndarray, y_train: np.ndarray) -> np.ndarray:
         """Calculate gradient of the softmax loss.
@@ -69,28 +70,26 @@ class Softmax:
         # Set random weight
         self.w = np.random.rand(dim, self.n_class)
 
-        # Set up mini-batch stochastic gradient descent
-        batch_size = 100
+        # mini-batches for SGD stochastic gradient descent
+        batch_size = self.batch_size
         batches = samples // batch_size
         indices = np.arange(samples)
 
-        for epoch in range(self.epochs):
+        for _ in range(self.epochs):
             # Gradient descent
-            np.random.shuffle(indices)
+            np.random.shuffle(indices) # shuffle indices for each epoch 
             for batch in range(batches):
-                start = batch * batch_size
+                start = batch * batch_size 
                 end = (batch + 1) * batch_size
                 if end >= samples:
                     end = -1
                 batch_indices = indices[start:end]
-                batch_X = X_train[batch_indices]
-                batch_y = y_train[batch_indices]
+                batch_X,batch_y = X_train[batch_indices], y_train[batch_indices]
                 batch_w = self.calc_gradient(batch_X, batch_y)
                 self.w -= self.lr * batch_w
 
             # Decrease learning rate
-            if (self.decrease_lr):
-                self.lr *= 0.95
+            self.lr *= self.decrease_lr
 
 
     def predict(self, X_test: np.ndarray) -> np.ndarray:

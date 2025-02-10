@@ -4,7 +4,7 @@ import numpy as np
 
 
 class SVM:
-    def __init__(self, n_class: int, lr: float, epochs: int, reg_const: float):
+    def __init__(self, n_class: int, lr: float, epochs: int, reg_const: float, decay_rate: float = 0.85):
         """Initialize a new classifier.
 
         Parameters:
@@ -13,11 +13,12 @@ class SVM:
             epochs: the number of epochs to train for
             reg_const: the regularization constant
         """
-        self.w = None  
+        self.w = None
         self.lr = lr
         self.epochs = epochs
         self.reg_const = reg_const
         self.n_class = n_class
+        self.decay_rate = decay_rate
 
     def calc_gradient(self, X_train: np.ndarray, y_train: np.ndarray) -> np.ndarray:
         """Calculate gradient of the svm hinge loss.
@@ -35,43 +36,63 @@ class SVM:
             the gradient with respect to weights w; an array of the same shape
                 as w
         """
-        N, _ = X_train.shape
-        grad_w = np.zeros_like(self.w)
-
-        for i in range(N):
-            scores = X_train[i].dot(self.w)
-            correct_class_score = scores[y_train[i]]
-            for j in range(self.n_class):
-                if j == y_train[i]:
-                    continue
-                margin = scores[j] - correct_class_score + 1  # delta = 1
-                if margin > 0:
-                    grad_w[:, j] += X_train[i]
-                    grad_w[:, y_train[i]] -= X_train[i]
-
-        grad_w /= N
-        grad_w += self.reg_const * self.w  # Regularization term
-        return grad_w
+        batch_size, dim = X_train.shape[0], X_train.shape[1]
+        batch_w = np.zeros((dim, self.n_class))
+        
+        for x in range(batch_size):
+            for c in range(self.n_class):
+                if c != y_train[x]:
+                    lhs = np.dot(np.transpose(self.w)[y_train[x]], X_train[x])
+                    rhs = np.dot(np.transpose(self.w)[c], X_train[x])
+                    if lhs - rhs < 1:
+                        lr_Xtrain = self.lr * X_train[x]
+                        np.transpose(batch_w)[y_train[x]] = np.transpose(batch_w)[y_train[x]] + lr_Xtrain
+                        np.transpose(batch_w)[c] = np.transpose(batch_w)[c] - lr_Xtrain
+                np.transpose(batch_w)[c] = np.transpose(batch_w)[c] - (self.lr * self.reg_const / batch_size) * np.transpose(self.w)[c]
+        return batch_w/batch_size
 
     def train(self, X_train: np.ndarray, y_train: np.ndarray):
         """Train the classifier.
 
         Hint: operate on mini-batches of data for SGD.
-        - Initialize self.w as a matrix with random values sampled uniformly from [-1, 1)
-        and scaled by 0.01. This scaling prevents overly large initial weights,
-        which can adversely affect training.
 
         Parameters:
             X_train: a numpy array of shape (N, D) containing training data;
                 N examples with D dimensions
-            y_train: a numpy array of shape (N,) containing training labels
+            y_train: a numpy array of shape (N,) containing training labe
+            s
         """
-        _, D = X_train.shape
-        self.w = np.random.rand(D, self.n_class)
+       
+        samples, dim = X_train.shape[0], X_train.shape[1]
 
-        for _ in range(self.epochs):
-            grad_w = self.calc_gradient(X_train, y_train)
-            self.w -= self.lr * grad_w
+        # Start the training with random weights
+        self.w = np.random.rand(dim, self.n_class)
+
+        # Set up mini-batch stocastic gradient descent
+        batch_size = 1000
+        batches = samples // batch_size
+        indices = np.arange(samples)
+
+        for epoch in range(self.epochs):
+            # Print intermediate accuracy used for debugging
+            # y_pred = X_train @ self.w
+            # temp = [np.argmax(i) for i in y_pred]
+            # print("Epoch", epoch, "Accuracy",np.sum(y_train == temp) / len(y_train) * 100)
+
+            # Gradient descent
+            np.random.shuffle(indices)
+            for batch in range(batches):
+                start = batch * batch_size
+                end = (batch + 1) * batch_size
+                if end >= samples:
+                    end = -1
+                batch_indices = indices[start: end]
+                batch_w = self.calc_gradient(X_train[batch_indices], y_train[batch_indices])
+                self.w += self.lr * batch_w
+            
+            # Decrease learning rate
+            self.lr *= self.decay_rate
+
 
     def predict(self, X_test: np.ndarray) -> np.ndarray:
         """Use the trained weights to predict labels for test data points.
@@ -85,5 +106,5 @@ class SVM:
                 length N, where each element is an integer giving the predicted
                 class.
         """
-        scores = X_test.dot(self.w)
-        return np.argmax(scores, axis=1)
+        y_pred = X_test @ self.w
+        return [np.argmax(i) for i in y_pred]
