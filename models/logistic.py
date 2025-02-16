@@ -11,7 +11,7 @@ class Logistic:
             lr: the learning rate
             epochs: the number of epochs to train for
         """
-        self.w = None  # TODO: change this
+        self.w = np.random.randn(11,)
         self.lr = lr
         self.epochs = epochs
         self.threshold = threshold
@@ -28,7 +28,7 @@ class Logistic:
         # TODO: implement me
         # Hint: To prevent numerical overflow, try computing the sigmoid for positive numbers and negative numbers separately.
         #       - For negative numbers, try an alternative formulation of the sigmoid function.
-        return
+        return 1/(1+np.exp(-z))
 
     def train(self, X_train: np.ndarray, y_train: np.ndarray):
         """Train the classifier.
@@ -44,8 +44,23 @@ class Logistic:
                 N examples with D dimensions
             y_train: a numpy array of shape (N,) containing training labels
         """
-        # TODO: implement me
-        pass
+        N,_ = X_train.shape
+        for j in range(self.epochs):
+          self.lr = self.lr / (j+1)
+          for i in range(N):
+            z = np.dot(self.w.T, X_train[i])
+            sig_prediction = self.sigmoid(z)
+            if sig_prediction > self.threshold:
+              y_prediction = 1
+            else:
+              y_prediction = -1
+
+            if y_train[i] == y_prediction :
+              pass
+            else:
+              update = self.sigmoid(-y_train[i] * z)
+              self.w = self.w + self.lr * update * y_train[i] * X_train[i]
+        
 
     def predict(self, X_test: np.ndarray) -> np.ndarray:
         """Use the trained weights to predict labels for test data points.
@@ -59,5 +74,15 @@ class Logistic:
                 length N, where each element is an integer giving the predicted
                 class.
         """
-        # TODO: implement me
-        return
+        N,_ = X_test.shape
+        predictions = []
+        for i in range(N):
+          z = np.dot(self.w.T, X_test[i])
+          sig_prediction = self.sigmoid(z)
+          if sig_prediction > self.threshold:
+              y_prediction = 1
+          else :
+              y_prediction = -1
+          predictions.append(y_prediction)
+
+        return np.array(predictions)
