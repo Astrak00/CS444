@@ -3,3 +3,5 @@ __pycache__
 *.gz
 .DS_Store
 .vscode
+.ipynb_checkpoints
+data

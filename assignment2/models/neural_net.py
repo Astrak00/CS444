@@ -21,6 +21,7 @@ class NeuralNetwork:
         output_size: int,
         num_layers: int,
         opt: str,
+        reg_const: float = 0.0001,
     ):
         """Initialize the model. Weights are initialized to small random values
         and biases are initialized to zero. Weights and biases are stored in
@@ -42,6 +43,11 @@ class NeuralNetwork:
         self.hidden_sizes = hidden_sizes
         self.output_size = output_size
         self.num_layers = num_layers
+
+        self.output = {}
+        self.gradients = {}
+        self.reg_const = reg_const
+        self.lr = -1.0
 
         self.t = 1
         self.m: dict[str, np.ndarray] = {}
@@ -76,17 +82,18 @@ class NeuralNetwork:
         # for i in range(len(X)):
         #     result = np.dot(X[i], W) + b
         # return result
-        np.dot(X, W)
-        a = X @ W
-        return a + b
+        # np.dot(X, W)
+        return X @ W + b
     
     def linear_grad(self, W: np.ndarray, X: np.ndarray, b: np.ndarray, de_dz: np.ndarray, reg, N) -> np.ndarray:
         """Gradient of linear layer
             z = WX + b
             returns de_dw, de_db, de_dx
         """
-        # TODO: implement me
-        return 
+        de_dw = (X.T @ de_dz) / N + reg * W/N
+        de_db = np.sum(de_dz, axis=0, keepdims=True) / N
+        de_dx = (de_dz @ W.T) / N
+        return de_dw, de_db, de_dx
 
     def relu(self, X: np.ndarray) -> np.ndarray:
         """Rectified Linear Unit (ReLU).
@@ -136,7 +143,7 @@ class NeuralNetwork:
         # the same keys as self.params. You can use functions like
         # self.linear, self.relu, and self.mse in here.
 
-        self.outputs["r"+str(0)] = X
+        self.outputs["r0"] = X
         current_X = X
 
         for layer_index in range(1, self.num_layers + 1):
@@ -222,6 +229,8 @@ class NeuralNetwork:
         # TODO: implement me. You'll want to add an if-statement that can
         # handle updates for both SGD and Adam depending on the value of opt.
         if opt == "SGD":
+            if self.lr != -1.0:
+                self.lr = lr
             for i in range(1, self.num_layers + 1):
                 self.params["W" + str(i)] -= lr * self.gradients["W" + str(i)]
                 self.params["b" + str(i)] -= lr * self.gradients["b" + str(i)]
