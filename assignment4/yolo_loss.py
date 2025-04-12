@@ -48,7 +48,6 @@ class YoloLoss(nn.Module):
         self.l_noobj = l_noobj
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "mps" if torch.mps.is_available() else "cpu")
 
-
     def xywh2xyxy(self, boxes):
         """
         Parameters:
