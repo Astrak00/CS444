@@ -116,6 +116,7 @@ def predict_image(model, image_name, root_img_directory=""):
         - image name
         - predicted class probability
     """
+    model_device = next(model.parameters()).device  # Get the device of the model
 
     result = []
     image = cv2.imread(os.path.join(root_img_directory + image_name))
@@ -130,8 +131,7 @@ def predict_image(model, image_name, root_img_directory=""):
     ])
     img = transform(img)
 
-    img = img.unsqueeze(0)
-    img = img.cpu()
+    img = img.unsqueeze(0).to(model_device)  # Move input to the same device as the model
 
     pred = model(img)  # 1xSxSx(B*5+C)
     pred = pred.cpu()
